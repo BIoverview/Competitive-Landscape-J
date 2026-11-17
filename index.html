@@ -1,4 +1,4 @@
-<html data-type="html" data-identifier="4c28f3bb-81ef-42d8-9dfb-d0ba759d57a2" data-title="Competitive Landscape &amp; Testigos 2026" data-version="26" width="1240" height="920"><head>
+<html data-type="html" data-identifier="4c28f3bb-81ef-42d8-9dfb-d0ba759d57a2" data-title="Competitive Landscape &amp; Testigos 2026" data-version="27" width="1240" height="920"><head>
   <meta charset="UTF-8">
   <title>Competitive Landscape &amp; Testigos JLR</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -454,7 +454,6 @@
       width: 100%;
     }
 
-    /* CONTENEDOR TREEMAP 100% FLUIDO */
     .treemap-canvas-container {
       position: relative;
       width: 100%;
@@ -933,15 +932,18 @@
         </div>
       </div>
 
-      <!-- FILA PARALELA: GRPs POR MARCA (IZQUIERDA) Y DETALLE POR CANAL (DERECHA) -->
+      <!-- FILA PARALELA: GRPs EN TV (CON SELECTOR POR MES Y RANKING) Y DETALLE POR CANAL -->
       <div class="charts-grid">
         <div class="chart-panel">
           <div class="panel-header">
             <div class="panel-header-titles">
-              <h2 id="chart-title-brandgrps">GRPs en TV por Marca</h2>
-              <p id="chart-sub-brandgrps">Ranking acumulado en televisión (OTV, PTV, LTV) por marca</p>
+              <h2 id="chart-title-brandgrps">GRPs en TV por Mes</h2>
+              <p id="chart-sub-brandgrps">Evolución mensual de GRPs en televisión (OTV, PTV, LTV) por marca</p>
             </div>
-            <span class="panel-badge">Televisión</span>
+            <div class="trend-toggle-group">
+              <button type="button" class="trend-toggle-btn active" id="btn-tv-trend-month">Por Mes</button>
+              <button type="button" class="trend-toggle-btn" id="btn-tv-trend-brand">Ranking Marcas</button>
+            </div>
           </div>
           <div class="chart-wrapper" style="height: 320px;">
             <canvas id="brandGrpsChart"></canvas>
@@ -1170,6 +1172,7 @@
 
     let trendViewMode = 'BRANDS';
     let mediaMixViewMode = 'ABS';
+    let tvChartMode = 'MONTH'; // 'MONTH' por defecto o 'BRAND' para ranking
 
     let computedTreemapBoxes = [];
     let lastFilteredRecordsForTreemap = [];
@@ -1678,12 +1681,14 @@
       let totalON = 0;
       let totalOFF = 0;
 
+      // Variables para análisis de TV GRPs
       let totalTVGRPs = 0;
       let clientTVGRPs = 0;
       const tvBrandsSet = new Set();
       let tvSpotsCount = 0;
-      const brandGrpsMap = {};
-      const brandSpotsMap = {};
+      const brandTVTotalGRPs = {};
+      const brandTVTotalSpots = {};
+      const monthlyBrandTVGRPs = {}; // marca -> [12 meses]
 
       filtered.forEach(r => {
         if (!marcasMap[r.brand]) {
@@ -1711,8 +1716,15 @@
           const gVal = (r.grp || 0);
           totalTVGRPs += gVal;
           tvSpotsCount++;
-          brandGrpsMap[r.brand] = (brandGrpsMap[r.brand] || 0) + gVal;
-          brandSpotsMap[r.brand] = (brandSpotsMap[r.brand] || 0) + 1;
+          brandTVTotalGRPs[r.brand] = (brandTVTotalGRPs[r.brand] || 0) + gVal;
+          brandTVTotalSpots[r.brand] = (brandTVTotalSpots[r.brand] || 0) + 1;
+
+          if (!monthlyBrandTVGRPs[r.brand]) {
+            monthlyBrandTVGRPs[r.brand] = new Array(12).fill(0);
+          }
+          if (r.mesIdx >= 0 && r.mesIdx < 12) {
+            monthlyBrandTVGRPs[r.brand][r.mesIdx] += gVal;
+          }
 
           if (gVal > 0 || r.inv > 0) {
             tvBrandsSet.add(r.brand);
@@ -1941,14 +1953,12 @@
         periodoDesc = `Trimestre ${selectedQuarter}`;
       }
 
-      // NARRATIVA INTELIGENTE DE INSIGHTS ESTRATÉGICOS: ENFOCADA EN LAS MARCAS LÍDERES
       const top3Brands = aggregatedBrands.slice(0, 3);
       const topBrandsFormattedText = top3Brands.map(b => {
         const bSoi = grandTotal > 0 ? Math.round((b.total / grandTotal) * 100) : 0;
         return `<strong>${b.brand}</strong> ($${formatMillions(b.total)}M, ${bSoi}% SOI)`;
       }).join(', ');
 
-      // Determinar si Land Rover estuvo en el top de actividad (Top 3)
       const clientPosIndex = aggregatedBrands.findIndex(b => b.isClient);
       const clientInTop = clientPosIndex >= 0 && clientPosIndex < 3;
       let landRoverMention = '';
@@ -2026,7 +2036,7 @@
       try { renderTopCompetitorsChart(aggregatedBrands); } catch(e){ console.error(e); }
       try { renderMonthlyTrendChart(aggregatedBrands, monthlyTotals); } catch(e){ console.error(e); }
       try { renderMediaMixChart(aggregatedBrands); } catch(e){ console.error(e); }
-      try { renderBrandGrpsChart(brandGrpsMap, brandSpotsMap, totalTVGRPs); } catch(e){ console.error(e); }
+      try { renderBrandGrpsChart(monthlyBrandTVGRPs, brandTVTotalGRPs, brandTVTotalSpots, totalTVGRPs); } catch(e){ console.error(e); }
       try { renderBroadcastDetailChart(broadcastChannelTotals, selectedBroadcastMedium); } catch(e){ console.error(e); }
       try { renderTypeChart(typeTotals, grandTotal, selectedTypeMedia); } catch(e){ console.error(e); }
       try { renderTable(aggregatedBrands, grandTotal); } catch(e){ console.error(e); }
@@ -2036,80 +2046,166 @@
       }, 30);
     }
 
-    function renderBrandGrpsChart(brandGrpsMap, brandSpotsMap, totalTVGRPs) {
+    // GRÁFICO GRPs EN TV: SOPORTE MODO 'MONTH' (POR MES) O MODO 'BRAND' (RANKING MARCAS)
+    function renderBrandGrpsChart(monthlyBrandTVGRPs, brandTVTotalGRPs, brandTVTotalSpots, totalTVGRPs) {
       const canvas = document.getElementById('brandGrpsChart');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      
-      let isUsingSpots = (totalTVGRPs === 0);
-      let sourceMap = isUsingSpots ? brandSpotsMap : brandGrpsMap;
-
-      let sorted = Object.entries(sourceMap || {})
-        .map(([brand, val]) => ({ brand, val }))
-        .sort((a, b) => b.val - a.val)
-        .slice(0, 10);
-
-      let labels = sorted.map(d => d.brand);
-      let values = sorted.map(d => d.val);
-      let colors = sorted.map(d => checkIsClientBrand(d.brand) ? '#005a2b' : '#1e3a8a');
-
-      if (labels.length === 0) {
-        labels = ['Sin actividad TV'];
-        values = [0];
-        colors = ['#cbd5e1'];
-      }
 
       if (brandGrpsChartInstance) {
         brandGrpsChartInstance.destroy();
         brandGrpsChartInstance = null;
       }
 
-      try {
-        brandGrpsChartInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [{
-              data: values,
-              backgroundColor: colors,
-              borderRadius: 4,
-              barThickness: 15
-            }]
-          },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: function(ctx) {
-                    const val = ctx.raw;
-                    if (isUsingSpots) {
-                      return ` ${val.toLocaleString()} spots en TV`;
+      const titleEl = document.getElementById('chart-title-brandgrps');
+      const subEl = document.getElementById('chart-sub-brandgrps');
+
+      if (tvChartMode === 'MONTH') {
+        if (titleEl) titleEl.textContent = "GRPs en TV por Mes";
+        if (subEl) subEl.textContent = "Evolución mensual de GRPs en televisión (OTV, PTV y LTV) por marca";
+
+        const sortedBrands = Object.entries(brandTVTotalGRPs || {})
+          .sort((a, b) => b[1] - a[1])
+          .map(entry => entry[0])
+          .slice(0, 6);
+
+        const brandPaletteMap = {
+          'infiniti': '#1e3a8a',
+          'land rover': '#005a2b',
+          'lexus': '#d97706',
+          'bmw': '#0284c7',
+          'audi': '#7c3aed',
+          'porsche': '#be123c',
+          'mercedes benz': '#0891b2'
+        };
+        const fallbackColors = ['#1e3a8a', '#2563eb', '#d97706', '#0284c7', '#7c3aed', '#be123c'];
+
+        const datasets = sortedBrands.map((brand, idx) => {
+          const isClient = checkIsClientBrand(brand);
+          const color = isClient ? '#005a2b' : (brandPaletteMap[brand.toLowerCase().trim()] || fallbackColors[idx % fallbackColors.length]);
+          const data = monthlyBrandTVGRPs[brand] || new Array(12).fill(0);
+
+          return {
+            label: brand + (isClient ? ' (JLR)' : ''),
+            data: data,
+            backgroundColor: color,
+            borderRadius: 3,
+            stack: 'tvStack'
+          };
+        });
+
+        try {
+          brandGrpsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: MESES_NOMBRES,
+              datasets: datasets.length > 0 ? datasets : [{
+                label: 'Sin actividad TV',
+                data: new Array(12).fill(0),
+                backgroundColor: '#cbd5e1'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  stacked: true,
+                  grid: { display: false },
+                  ticks: { font: { size: 10.5, weight: '600' }, color: '#475569' }
+                },
+                y: {
+                  stacked: true,
+                  beginAtZero: true,
+                  ticks: { callback: v => `${v} GRPs` },
+                  grid: { color: '#f1f5f9' }
+                }
+              },
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: { boxWidth: 10, font: { size: 10, weight: '600' }, padding: 6 }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      return ` ${ctx.dataset.label}: ${ctx.raw.toFixed(1)} GRPs`;
                     }
-                    const pct = totalTVGRPs > 0 ? ((val / totalTVGRPs) * 100).toFixed(1) : 0;
-                    return ` ${val.toFixed(1)} GRPs (${pct}% del total TV)`;
                   }
                 }
               }
+            }
+          });
+        } catch (err) {
+          console.error("Error al renderizar brandGrpsChart mensual:", err);
+        }
+      } else {
+        if (titleEl) titleEl.textContent = "Ranking de GRPs en TV por Marca";
+        if (subEl) subEl.textContent = "Volumen acumulado en televisión (OTV, PTV, LTV) por marca";
+
+        let isUsingSpots = (totalTVGRPs === 0);
+        let sourceMap = isUsingSpots ? brandTVTotalSpots : brandTVTotalGRPs;
+
+        let sorted = Object.entries(sourceMap || {})
+          .map(([brand, val]) => ({ brand, val }))
+          .sort((a, b) => b.val - a.val)
+          .slice(0, 10);
+
+        let labels = sorted.map(d => d.brand);
+        let values = sorted.map(d => d.val);
+        let colors = sorted.map(d => checkIsClientBrand(d.brand) ? '#005a2b' : '#1e3a8a');
+
+        if (labels.length === 0) {
+          labels = ['Sin actividad TV'];
+          values = [0];
+          colors = ['#cbd5e1'];
+        }
+
+        try {
+          brandGrpsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 4,
+                barThickness: 15
+              }]
             },
-            scales: {
-              x: {
-                beginAtZero: true,
-                ticks: { callback: v => isUsingSpots ? `${v} Spots` : `${v} GRPs` },
-                grid: { color: '#f1f5f9' }
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const val = ctx.raw;
+                      if (isUsingSpots) return ` ${val.toLocaleString()} spots en TV`;
+                      const pct = totalTVGRPs > 0 ? ((val / totalTVGRPs) * 100).toFixed(1) : 0;
+                      return ` ${val.toFixed(1)} GRPs (${pct}% del total TV)`;
+                    }
+                  }
+                }
               },
-              y: {
-                grid: { display: false },
-                ticks: { font: { size: 11, weight: '600' }, color: '#334155' }
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  ticks: { callback: v => isUsingSpots ? `${v} Spots` : `${v} GRPs` },
+                  grid: { color: '#f1f5f9' }
+                },
+                y: {
+                  grid: { display: false },
+                  ticks: { font: { size: 11, weight: '600' }, color: '#334155' }
+                }
               }
             }
-          }
-        });
-      } catch (err) {
-        console.error("Error al renderizar brandGrpsChart:", err);
+          });
+        } catch (err) {
+          console.error("Error al renderizar brandGrpsChart ranking:", err);
+        }
       }
     }
 
@@ -3101,6 +3197,26 @@
       document.getElementById('competitor-filter').addEventListener('change', applyFilters);
       document.getElementById('type-media-filter').addEventListener('change', applyFilters);
       document.getElementById('broadcast-medium-selector').addEventListener('change', applyFilters);
+
+      // Event listeners para los botones de GRPs (Por Mes / Ranking)
+      const btnTVMonth = document.getElementById('btn-tv-trend-month');
+      const btnTVBrand = document.getElementById('btn-tv-trend-brand');
+
+      if (btnTVMonth && btnTVBrand) {
+        btnTVMonth.addEventListener('click', () => {
+          tvChartMode = 'MONTH';
+          btnTVMonth.classList.add('active');
+          btnTVBrand.classList.remove('active');
+          applyFilters();
+        });
+
+        btnTVBrand.addEventListener('click', () => {
+          tvChartMode = 'BRAND';
+          btnTVBrand.classList.add('active');
+          btnTVMonth.classList.remove('active');
+          applyFilters();
+        });
+      }
 
       const treemapBrandFilterEl = document.getElementById('treemap-brand-filter');
       if (treemapBrandFilterEl) {
