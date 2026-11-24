@@ -1,4 +1,4 @@
-<html data-type="html" data-identifier="4c28f3bb-81ef-42d8-9dfb-d0ba759d57a2" data-title="Competitive Landscape &amp; Testigos 2026" data-version="28" width="1240" height="920"><head>
+<html data-type="html" data-identifier="4c28f3bb-81ef-42d8-9dfb-d0ba759d57a2" data-title="Competitive Landscape &amp; Testigos 2026" data-version="29" width="1240" height="920"><head>
   <meta charset="UTF-8">
   <title>Competitive Landscape &amp; Testigos JLR</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -17,10 +17,143 @@
       padding: 20px 24px;
     }
 
+    /* PANTALLA DE ACCESO / LOGIN OVERLAY */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 30%, #0a2e1c 0%, #04120a 70%, #000000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999999;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 40px 32px 30px 32px;
+      width: 100%;
+      max-width: 410px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .login-badge-lock {
+      width: 52px;
+      height: 52px;
+      background-color: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .login-card h2 {
+      font-size: 21px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+
+    .login-card p.login-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+
+    .login-field {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .login-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+
+    .login-input-wrap {
+      position: relative;
+    }
+
+    .login-field input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 15px;
+      color: #0f172a;
+      outline: none;
+      transition: all 0.2s ease;
+      letter-spacing: 2px;
+    }
+
+    .login-field input:focus {
+      border-color: #005a2b;
+      box-shadow: 0 0 0 3px rgba(0, 90, 43, 0.18);
+    }
+
+    .login-field input.input-error {
+      border-color: #dc2626;
+      background-color: #fff1f2;
+    }
+
+    .login-error-msg {
+      display: none;
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    .login-submit-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #005a2b;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.05s ease;
+      margin-top: 6px;
+    }
+
+    .login-submit-btn:hover {
+      background-color: #004420;
+    }
+
+    .login-submit-btn:active {
+      transform: scale(0.99);
+    }
+
+    .login-card p.login-foot {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 22px;
+      line-height: 1.4;
+    }
+
+    /* DASHBOARD */
     .dashboard-container {
       max-width: 1200px;
       margin: 0 auto;
       background: #ffffff;
+      display: none; /* Se muestra tras desbloqueo */
     }
 
     /* Header */
@@ -94,6 +227,27 @@
       font-size: 12px;
       font-weight: 600;
       color: #9f1239;
+    }
+
+    .logout-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .logout-btn:hover {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      border-color: #cbd5e1;
     }
 
     .status-dot {
@@ -680,7 +834,28 @@
 </head>
 <body>
 
-  <div class="dashboard-container">
+  <!-- PANTALLA DE ACCESO / LOGIN MODAL -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-badge-lock">🔒</div>
+      <h2 id="login-modal-title">Acceso Restringido</h2>
+      <p id="login-modal-subtitle" class="login-sub">Competitive Landscape &amp; Testigos JLR</p>
+      
+      <div class="login-field">
+        <label for="login-password-input">Contraseña de acceso</label>
+        <div class="login-input-wrap">
+          <input type="password" id="login-password-input" placeholder="••••" autocomplete="current-password" autofocus="">
+        </div>
+        <div id="login-error-text" class="login-error-msg">Contraseña incorrecta. Intenta nuevamente.</div>
+      </div>
+
+      <button type="button" id="btn-login-submit" class="login-submit-btn">Entrar al Dashboard</button>
+      <p id="login-modal-footer" class="login-foot">Información confidencial para uso exclusivo de análisis estratégico.</p>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR PRINCIPAL DEL DASHBOARD -->
+  <div class="dashboard-container" id="dashboard-main-container">
     <!-- Header General -->
     <div class="header">
       <div class="header-left">
@@ -698,6 +873,9 @@
           <span class="status-dot"></span>
           <span id="period-badge-text">Vista Mensual / Trimestral</span>
         </div>
+        <button type="button" class="logout-btn" id="btn-logout" title="Bloquear sesión">
+          <span>🔒 Salir</span>
+        </button>
       </div>
     </div>
 
@@ -1136,6 +1314,9 @@
   </div>
 
   <script>
+    const DASHBOARD_PIN = "1948";
+    const SESSION_KEY = "jlr_landscape_authorized_session";
+
     const TARGET_BRAND_NAME = "Land Rover";
     
     const GITHUB_CSV_URLS = [
@@ -1168,6 +1349,7 @@
 
     let rawRecords = [];
     let rawTestigos = [];
+    let isAppInitialized = false;
 
     let classificationChartInstance = null;
     let brandSoiChartInstance = null;
@@ -3180,7 +3362,13 @@
       }
     }
 
-    window.addEventListener('load', () => {
+    function startDashboardApp() {
+      if (isAppInitialized) return;
+      isAppInitialized = true;
+
+      const mainContainer = document.getElementById('dashboard-main-container');
+      if (mainContainer) mainContainer.style.display = 'block';
+
       cargarBaseDesdeGitHub(0);
       initTestigosModule();
       setupTreemapInteractions();
@@ -3225,20 +3413,13 @@
         switchTab(btnTabResumen, contentResumen, "Resumen Detallado", "Inversión por Marca y Quarter (Q1, Q2, Q3 2026)");
       });
 
-      // Event listener para el nuevo filtro de Año en Competitive Landscape
       const yearFilterEl = document.getElementById('year-filter');
       if (yearFilterEl) {
         yearFilterEl.addEventListener('change', applyFilters);
       }
 
-      document.getElementById('quarter-filter').addEventListener('change', () => {
-        applyFilters();
-      });
-
-      document.getElementById('month-filter').addEventListener('change', () => {
-        applyFilters();
-      });
-
+      document.getElementById('quarter-filter').addEventListener('change', applyFilters);
+      document.getElementById('month-filter').addEventListener('change', applyFilters);
       document.getElementById('classification-filter').addEventListener('change', applyFilters);
       document.getElementById('macro-media-filter').addEventListener('change', applyFilters);
       document.getElementById('media-type-filter').addEventListener('change', applyFilters);
@@ -3246,7 +3427,6 @@
       document.getElementById('type-media-filter').addEventListener('change', applyFilters);
       document.getElementById('broadcast-medium-selector').addEventListener('change', applyFilters);
 
-      // Event listeners para los botones de GRPs (Por Mes / Ranking)
       const btnTVMonth = document.getElementById('btn-tv-trend-month');
       const btnTVBrand = document.getElementById('btn-tv-trend-brand');
 
@@ -3329,11 +3509,59 @@
         renderTestigosTable();
       });
 
+      const btnLogout = document.getElementById('btn-logout');
+      if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+          sessionStorage.removeItem(SESSION_KEY);
+          window.location.reload();
+        });
+      }
+
       window.addEventListener('resize', () => {
         if (contentLandscape.classList.contains('active')) {
           renderNativeTreemap(lastFilteredRecordsForTreemap);
         }
       });
+    }
+
+    // CONTROL DE AUTENTICACIÓN
+    window.addEventListener('load', () => {
+      const loginOverlay = document.getElementById('login-overlay');
+      const passwordInput = document.getElementById('login-password-input');
+      const btnSubmit = document.getElementById('btn-login-submit');
+      const errorMsg = document.getElementById('login-error-text');
+
+      function intentarLogin() {
+        const val = (passwordInput.value || '').trim();
+        if (val === DASHBOARD_PIN) {
+          sessionStorage.setItem(SESSION_KEY, "granted");
+          loginOverlay.style.display = 'none';
+          errorMsg.style.display = 'none';
+          passwordInput.classList.remove('input-error');
+          startDashboardApp();
+        } else {
+          passwordInput.classList.add('input-error');
+          errorMsg.style.display = 'block';
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      }
+
+      // Validar si ya había ingresado la contraseña en esta sesión de navegación
+      if (sessionStorage.getItem(SESSION_KEY) === "granted") {
+        loginOverlay.style.display = 'none';
+        startDashboardApp();
+      } else {
+        loginOverlay.style.display = 'flex';
+        passwordInput.focus();
+
+        btnSubmit.addEventListener('click', intentarLogin);
+        passwordInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            intentarLogin();
+          }
+        });
+      }
     });
   </script>
 </body></html>
