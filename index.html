@@ -1,4 +1,4 @@
-<html data-type="html" data-identifier="4c28f3bb-81ef-42d8-9dfb-d0ba759d57a2" data-title="Competitive Landscape &amp; Testigos 2026" data-version="27" width="1240" height="920"><head>
+<html data-type="html" data-identifier="4c28f3bb-81ef-42d8-9dfb-d0ba759d57a2" data-title="Competitive Landscape &amp; Testigos 2026" data-version="28" width="1240" height="920"><head>
   <meta charset="UTF-8">
   <title>Competitive Landscape &amp; Testigos JLR</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -174,7 +174,7 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
-      min-width: 148px;
+      min-width: 140px;
       flex: 1;
     }
 
@@ -717,6 +717,14 @@
     <!-- PESTAÑA 1: COMPETITIVE LANDSCAPE -->
     <div class="tab-content active" id="tab-content-landscape">
       <div class="filters-bar">
+        <!-- 0. FILTRO DE AÑO -->
+        <div class="filter-group">
+          <label for="year-filter">Año</label>
+          <select id="year-filter">
+            <option value="ALL" selected="">Todos los Años</option>
+          </select>
+        </div>
+
         <!-- 1. FILTRO DE TRIMESTRE / Q -->
         <div class="filter-group">
           <label for="quarter-filter">Periodo / Trimestre</label>
@@ -1484,6 +1492,7 @@
               const marca = String(findColumnValue(row, /^marcas$/) || findColumnValue(row, /^marca$/) || '').trim();
               if (!marca) return;
 
+              const anoRaw = String(findColumnValue(row, /^a[ñn]o$/) || findColumnValue(row, /^ano$/) || findColumnValue(row, /year/) || '').trim();
               const invM = parseMoneyToMillions(findColumnValue(row, /inver/));
               const clasif = String(findColumnValue(row, /clasifi|segmento/) || 'Premium').trim();
               const medio = String(findColumnValue(row, /^medio$/) || 'Otros').trim();
@@ -1525,6 +1534,7 @@
 
               rawRecords.push({
                 brand: marca,
+                year: anoRaw || '2026',
                 clasif: clasif || 'Premium',
                 medio: medio || 'Otros',
                 tipoMedio: tipoMedio.includes('ON') ? 'ON' : 'OFF',
@@ -1573,6 +1583,21 @@
     }
 
     function poblarFiltrosDinamicos() {
+      // Poblar Filtro de Año
+      const yearSelect = document.getElementById('year-filter');
+      if (yearSelect) {
+        const anosPresentes = [...new Set(rawRecords.map(r => r.year).filter(Boolean))].sort();
+        if (anosPresentes.length > 0) {
+          yearSelect.innerHTML = '<option value="ALL" selected>Todos los Años</option>';
+          anosPresentes.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a;
+            opt.textContent = a;
+            yearSelect.appendChild(opt);
+          });
+        }
+      }
+
       const qSelect = document.getElementById('quarter-filter');
       const qPresentes = [...new Set(rawRecords.map(r => r.q).filter(Boolean))].sort();
       if (qPresentes.length > 0) {
@@ -1651,6 +1676,7 @@
     function applyFilters() {
       if (rawRecords.length === 0) return;
 
+      const selectedYear = document.getElementById('year-filter') ? document.getElementById('year-filter').value : 'ALL';
       const selectedQuarter = document.getElementById('quarter-filter').value;
       const selectedMonth = document.getElementById('month-filter').value;
       const selectedClassification = document.getElementById('classification-filter').value;
@@ -1661,6 +1687,7 @@
       const selectedBroadcastMedium = document.getElementById('broadcast-medium-selector').value;
 
       const filtered = rawRecords.filter(r => {
+        if (selectedYear !== 'ALL' && r.year !== selectedYear) return false;
         if (selectedQuarter !== 'ALL' && r.q !== selectedQuarter) return false;
         if (selectedMonth !== 'ALL' && r.mesIdx !== parseInt(selectedMonth, 10)) return false;
         if (selectedClassification !== 'ALL' && r.clasif !== selectedClassification) return false;
@@ -1798,6 +1825,7 @@
       }
 
       const targetRecords = rawRecords.filter(r => {
+        if (selectedYear !== 'ALL' && r.year !== selectedYear) return false;
         if (targetType === 'brand') {
           if (r.brand.toLowerCase() !== targetName.toLowerCase() &&
               !(checkIsClientBrand(targetName) && r.isClient)) {
@@ -1944,13 +1972,24 @@
         kpiGrpsSubEl.textContent = `Sin pauta TV en el filtro`;
       }
 
-      let periodoDesc = "Acumulado Total";
+      const periodBadgeEl = document.getElementById('period-badge-text');
+      if (periodBadgeEl) {
+        if (selectedYear !== 'ALL') {
+          periodBadgeEl.textContent = `Año ${selectedYear}`;
+        } else {
+          periodBadgeEl.textContent = "Vista Mensual / Trimestral";
+        }
+      }
+
+      let periodoDesc = selectedYear !== 'ALL' ? `Año ${selectedYear} (Acumulado Total)` : "Acumulado Total";
       if (selectedQuarter !== 'ALL' && selectedMonth !== 'ALL') {
-        periodoDesc = `${selectedQuarter} - ${MESES_NOMBRES_LARGOS[parseInt(selectedMonth, 10)]}`;
+        periodoDesc = `${selectedYear !== 'ALL' ? selectedYear + ' ' : ''}${selectedQuarter} - ${MESES_NOMBRES_LARGOS[parseInt(selectedMonth, 10)]}`;
       } else if (selectedMonth !== 'ALL') {
-        periodoDesc = MESES_NOMBRES_LARGOS[parseInt(selectedMonth, 10)];
+        periodoDesc = `${selectedYear !== 'ALL' ? selectedYear + ' ' : ''}${MESES_NOMBRES_LARGOS[parseInt(selectedMonth, 10)]}`;
       } else if (selectedQuarter !== 'ALL') {
-        periodoDesc = `Trimestre ${selectedQuarter}`;
+        periodoDesc = `${selectedYear !== 'ALL' ? selectedYear + ' ' : ''}Trimestre ${selectedQuarter}`;
+      } else if (selectedYear !== 'ALL') {
+        periodoDesc = `Año ${selectedYear}`;
       }
 
       const top3Brands = aggregatedBrands.slice(0, 3);
@@ -2411,6 +2450,9 @@
     }
 
     function resetAllFilters() {
+      if (document.getElementById('year-filter')) {
+        document.getElementById('year-filter').value = 'ALL';
+      }
       document.getElementById('quarter-filter').value = 'ALL';
       document.getElementById('month-filter').value = 'ALL';
       document.getElementById('classification-filter').value = 'ALL';
@@ -3182,6 +3224,12 @@
       btnTabResumen.addEventListener('click', () => {
         switchTab(btnTabResumen, contentResumen, "Resumen Detallado", "Inversión por Marca y Quarter (Q1, Q2, Q3 2026)");
       });
+
+      // Event listener para el nuevo filtro de Año en Competitive Landscape
+      const yearFilterEl = document.getElementById('year-filter');
+      if (yearFilterEl) {
+        yearFilterEl.addEventListener('change', applyFilters);
+      }
 
       document.getElementById('quarter-filter').addEventListener('change', () => {
         applyFilters();
